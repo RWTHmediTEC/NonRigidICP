@@ -1,0 +1,8 @@
+According to MATLAB File Exchange [1] the licenses are as follows:
+
+- patchslim.m               BSD License
+- READ_stl                  BSD License
+- stlwrite                  BSD License
+
+
+[1] http://www.mathworks.com/matlabcentral/fileexchange/
