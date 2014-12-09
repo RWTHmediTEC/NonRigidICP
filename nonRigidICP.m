@@ -102,6 +102,9 @@ function [transformed_vertices, weights, accumulated_transformations] = nonRigid
 % Last changed on 2014-12-08.
 % License: BSD License
 
+%% Load exteral functions
+path_backup = path();
+addpath('./src');
 
 %% Parse the input parameters
 parser = inputParser;
@@ -261,6 +264,11 @@ end
 
 transformed_vertices = mesh_template.vertices;
 
+%% Redo changes to Path
+path(path_backup);
+
+end
+
 
 function alpha = getAlpha()
 % Stiffness parameter alpha choosen as in:
@@ -273,6 +281,8 @@ lambda = log(k0/kInf)/tMax;
 alpha = zeros(tMax,1);
 for t = 1:tMax
     alpha(tMax-t+1) = k0 * exp(lambda * t);
+end
+
 end
 
 
@@ -323,6 +333,8 @@ end
 
 w = w & distances < maxDist; % check if closest points are not to far away
 
+end
+
 
 function v2f = buildVerticesToFacesList(v, f)
 % Builds a mapping for every vertex to all faces that incorporate that vertex
@@ -331,6 +343,8 @@ for i=1:size(f,1) % every face
     v2f{f(i,1)} = [v2f{f(i,1)}, i];
     v2f{f(i,2)} = [v2f{f(i,2)}, i];
     v2f{f(i,3)} = [v2f{f(i,3)}, i];
+end
+
 end
 
 
@@ -348,6 +362,8 @@ for i=1:m
     idx = idx + 3;
 end
 e = unique(e,'rows');
+
+end
 
 
 function vWeight = computeVertexWeight(mesh, v2f)
@@ -371,6 +387,7 @@ for i=1:n
     vWeight(i) = sum(fWeight(v2f{i}, 1));
 end
 
+end
 
 
 
