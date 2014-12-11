@@ -170,7 +170,13 @@ function [transformed_mesh, weights, accumulated_transformations] = nonRigidICP(
         fprintf('\niter\talpha\tdiff\tinlier\ttime\n');
     end
 
+    stop_the_outermost_loop = false; % used to stop the outer loop if there is virtually no morphing in any of the computing steps
+
     for a = alpha'
+    
+        if stop_the_outermost_loop
+            break;
+        end
 
         %% TESTING: uncomment following line for ploting the current meshes
         %myPlot(template_mesh.vertices, template_mesh.faces, target_mesh.vertices, target_mesh.faces, 0.5, 1.0); pause();
@@ -253,9 +259,11 @@ function [transformed_mesh, weights, accumulated_transformations] = nonRigidICP(
                 fprintf('%d:\t%.0f\t%.4f\t%d\t%.1f\n', iter, a, normXdiff, sum(weights), toc(t1)); % print iter # and time
             end
 
-            % Test if do-while condition still holds
+            % do-while condition still holds?
             if normXdiff < epsilon/10000
-                return;
+                % The change rate is so marginal that we can break out from *all* iterations
+                stop_the_outermost_loop = true;
+                break;
             elseif normXdiff < epsilon
                 break;
             end
