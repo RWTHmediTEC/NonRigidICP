@@ -98,8 +98,8 @@ function [transformed_mesh, weights, accumulated_transformations] = nonRigidICP(
 % Copyright 2014 Chair of Medical Engineering, RWTH Aachen University
 % Written by Erik Noorman and Christoph Hänisch (haenisch@hia.rwth-aachen.de)
 % Version 1.0
-% Last changed on 2014-12-08.
-% License: BSD License
+% Last changed on 2014-12-11.
+% License: Modified BSD License (BSD license with non-military-use clause)
 
     %% Load exteral functions
     path_backup = path();
@@ -262,9 +262,10 @@ function [transformed_mesh, weights, accumulated_transformations] = nonRigidICP(
         end
     end
 
-    transformed_mesh = template_mesh;
+    transformed_mesh.vertices = template_mesh.vertices;
+    transformed_mesh.faces = template_mesh.faces;
 
-    %% Redo changes to Path
+    %% Revert path changes
     path(path_backup);
 end
 
