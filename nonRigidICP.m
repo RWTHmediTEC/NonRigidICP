@@ -66,15 +66,15 @@ function [transformed_vertices, weights, accumulated_transformations] = nonRigid
 %
 %       'transformed_vertices'         - aligned template vertices
 %
-%       'accumulated_transformations'  - transformation which transforms
-%                                        the original template_mesh such
-%                                        that it is aligned with the
-%                                        target_mesh
-%
 %       'weights'                      - template vertex weights of the
 %                                        last iteration. A value of zero
 %                                        denotes an outlier, a value of one
 %                                        denotes an inlier.
+%
+%       'accumulated_transformations'  - transformation which transforms
+%                                        the original template_mesh such
+%                                        that it is aligned with the
+%                                        target_mesh
 %
 %
 %    Example:
