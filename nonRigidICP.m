@@ -97,8 +97,8 @@ function [transformed_mesh, weights, accumulated_transformations] = nonRigidICP(
 
 % Copyright 2014 Chair of Medical Engineering, RWTH Aachen University
 % Written by Erik Noorman and Christoph Hänisch (haenisch@hia.rwth-aachen.de)
-% Version 1.0
-% Last changed on 2014-12-11.
+% Version 1.1
+% Last changed on 2015-01-14.
 % License: Modified BSD License (BSD license with non-military-use clause)
 
     %% Parse the input parameters
