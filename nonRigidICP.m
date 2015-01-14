@@ -101,11 +101,6 @@ function [transformed_mesh, weights, accumulated_transformations] = nonRigidICP(
 % Last changed on 2014-12-11.
 % License: Modified BSD License (BSD license with non-military-use clause)
 
-    %% Load exteral functions
-    path_backup = path();
-    prefix = fileparts(mfilename('fullpath')); % path to current m-file
-    addpath([prefix '/src']);
-
     %% Parse the input parameters
     parser = inputParser;
     addParameter(parser, 'transformation_init', [eye(3), [0;0;0]], @(x)validateattributes(x,{'numeric'},{'size',[3,4]}));
@@ -116,6 +111,11 @@ function [transformed_mesh, weights, accumulated_transformations] = nonRigidICP(
     addParameter(parser, 'alpha', getAlpha(), @(x)validateattributes(x,{'numeric'},{'>',0},'nonRigidICP'));
     addParameter(parser, 'verbosity', 1, @(x)validateattributes(x,{'numeric'},{'>=',0},'nonRigidICP'));
     parse(parser, varargin{:});
+
+    %% Load exteral functions
+    path_backup = path();
+    prefix = fileparts(mfilename('fullpath')); % path to current m-file
+    addpath([prefix '/src']);
 
     %% Initialise variables
     n = size(template_mesh.vertices, 1); % # template vertices
