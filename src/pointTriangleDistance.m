@@ -13,12 +13,13 @@ function [dist,PP0] = pointTriangleDistance(TRI,P)
 %   [dist,PP0] = pointTriangleDistance(TRI,P) additionally returns the
 %   closest point PP0 to P on the triangle TRI.
 %
-% Author: Gwendolyn Fischer
+% Author: Gwendolyn Fischer, slightly adapted by Christoph Hänisch
 % Release: 1.0
-% Release date: 09/02/02
+% Release date: 2015-04-22
 % Release: 1.1 Fixed Bug because of normalization
 % Release: 1.2 Fixed Bug because of typo in region 5 20101013
 % Release: 1.3 Fixed Bug because of typo in region 2 20101014
+% Release: 1.4 Small adapation for automatic mex conversion (use coder to compile it)
 
 % Possible extention could be a version tailored not to return the distance
 % and additionally the closest point, but instead return only the closest
@@ -76,6 +77,7 @@ function [dist,PP0] = pointTriangleDistance(TRI,P)
 %        |P0      \ 
 %  reg4  | reg5    \ reg6
 
+%#codegen
 
 %% Do some error checking
 if nargin<2
@@ -86,7 +88,7 @@ if size(P,2)~=3
   error('pointTriangleDistance: P needs to be of length 3.');
 end
 
-if size(TRI)~=[3 3]
+if all(size(TRI)~=[3 3])
   error('pointTriangleDistance: TRI needs to be of size 3x3.');
 end
 
