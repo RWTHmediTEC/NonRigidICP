@@ -25,41 +25,47 @@ function [transformed_mesh, weights, accumulated_transformations] = nonRigidICP(
 %    Additional optional arguments can be passed in the form of pairs with
 %    the following meanings:
 %
-%       'transformation_init'  - 3x4 transformation matrix which should
-%                                roughly align the two meshes. Not needed
-%                                if the two input meshes are already
-%                                roughly aligned. Defaults to the matrix
-%                                [eye(3), [0;0;0]].
+%       'initial_transformation'   - 3-by-4 transformation matrix that
+%                                    roughly aligns the two meshes (the
+%                                    template vertices are transformed).
+%                                    Not needed, if the two input meshes
+%                                    are already roughly aligned. Defaults
+%                                    to the matrix [eye(3), [0; 0; 0]].
 %
-%       'epsilon'              - Convergence parameter. Has to be positive
-%                                and defaults to a value of 0.0002.
+%       'epsilon'                  - Convergence parameter. Has to be
+%                                    positive and defaults to a value of
+%                                    0.0002.
 %
-%       'max_dist'             - Maximum vertex-to-surface-distance for a
-%                                nearest neighbor search to classify a
-%                                point as an inlier. Has to be positive and
-%                                defaults to a value of 20 units.
+%       'max_dist'                 - Maximum vertex-to-surface-distance for
+%                                    a nearest neighbor search to classify
+%                                    a point as an inlier. Has to be
+%                                    positive and defaults to a value of 20
+%                                    units.
 %
-%       'max_normal_diff'      - Maximum normal difference in degrees
-%                                between vertex and surface to classify a
-%                                point as an inlier. Has to be positive and
-%                                defaults to a value of 22 degrees.
+%       'max_normal_diff'          - Maximum normal difference in degrees
+%                                    between vertex and surface to classify
+%                                    a point as an inlier. Has to be
+%                                    positive and defaults to a value of 22
+%                                    degrees.
 %
-%       'max_iter'             - Maximal number of iterations per alpha
-%                                step. Has to be positive and defaults to a
-%                                value of 100 units.
+%       'max_iter'                 - Maximal number of iterations per alpha
+%                                    step. Has to be positive and defaults
+%                                    to a value of 100 units.
 %
-%       'alpha'                - Array of stiffness parameters. Defaults to
-%                                an exponentially descending curve (see the
-%                                internal function getAlpha() for more
-%                                details). The values are highly
-%                                application specific and may range from
-%                                intervals like [1; 1e8] to [1e-5; 100].
+%       'alpha'                    - Array of stiffness parameters.
+%                                    Defaults to an exponentially
+%                                    descending curve (see the internal
+%                                    function getAlpha() for more details).
+%                                    The values are highly application
+%                                    specific and may range from intervals
+%                                    like [1; 1e8] to [1e-5; 100].
 %
-%       'verbosity'            - Denotes the amount of informational text
-%                                put out by this function. The higher the
-%                                value the more information is put out.
-%                                Currently, only values of zero and one are
-%                                supported. The default value is one.
+%       'verbosity'                - Denotes the amount of informational
+%                                    text put out by this function. The
+%                                    higher the value the more information
+%                                    is put out. Currently, only values of
+%                                    zero and one are supported. The
+%                                    default value is one.
 %
 %
 %    Outputs:
@@ -95,15 +101,15 @@ function [transformed_mesh, weights, accumulated_transformations] = nonRigidICP(
 %
 %    See also patchslim (located on Matlab File Exchange)
 
-% Copyright 2014 Chair of Medical Engineering, RWTH Aachen University
+% Copyright 2014, 2015 Chair of Medical Engineering, RWTH Aachen University
 % Written by Erik Noorman and Christoph Hänisch (haenisch@hia.rwth-aachen.de)
-% Version 1.1
-% Last changed on 2015-01-14.
+% Version 1.2
+% Last changed on 2015-05-19.
 % License: Modified BSD License (BSD license with non-military-use clause)
 
     %% Parse the input parameters
     parser = inputParser;
-    addParameter(parser, 'transformation_init', [eye(3), [0;0;0]], @(x)validateattributes(x,{'numeric'},{'size',[3,4]}));
+    addParameter(parser, 'initial_transformation', [eye(3), [0;0;0]], @(x)validateattributes(x,{'numeric'},{'size',[3,4]}));
     addParameter(parser, 'epsilon', 0.0002, @(x)validateattributes(x,{'numeric'},{'>',0},'nonRigidICP'));
     addParameter(parser, 'max_dist', 20, @(x)validateattributes(x,{'numeric'},{'>',0},'nonRigidICP'));
     addParameter(parser, 'max_normal_diff', 22, @(x)validateattributes(x,{'numeric'},{'>',0},'nonRigidICP'));
@@ -120,7 +126,7 @@ function [transformed_mesh, weights, accumulated_transformations] = nonRigidICP(
     %% Initialise variables
     n = size(template_mesh.vertices, 1); % # template vertices
 
-    transformation_init = parser.Results.transformation_init;
+    initial_transformation = parser.Results.initial_transformation;
     epsilon = parser.Results.epsilon;
     max_dist = parser.Results.max_dist; % distance in mm
     max_normal_diff = parser.Results.max_normal_diff; % angle in degrees
@@ -130,19 +136,19 @@ function [transformed_mesh, weights, accumulated_transformations] = nonRigidICP(
 
 
     % Initialize accumulated transformations and template_mesh.vertices
-    if ~isequal(transformation_init, [eye(3), [0;0;0]])
+    if ~isequal(initial_transformation, [eye(3), [0;0;0]])
         % Transform the template_mesh.vertices with the initial transformation matrix.
         template_vertices_homogeneous = [template_mesh.vertices, ones(n, 1)];
-        transformed_vertices_homogeneous = template_vertices_homogeneous * transformation_init';
+        transformed_vertices_homogeneous = template_vertices_homogeneous * initial_transformation';
         template_mesh.vertices = transformed_vertices_homogeneous(:, 1:3);
 
         % If the initial transformation implies a reflection flip the face
         % normals such that they point to the former direction (e.g. outwards).
-        if sign(det(transformation_init(1:3,1:3))) == -1
+        if sign(det(initial_transformation(1:3,1:3))) == -1
             template_mesh.faces = [template_mesh.faces(:,1), template_mesh.faces(:,3), template_mesh.faces(:,2)];
         end
     end
-    X = repmat(transformation_init', n, 1);
+    X = repmat(initial_transformation', n, 1);
     accumulated_transformations = X;
 
     %% TESTING: meshes are roughly aligned? (uncomment following line for testing)
