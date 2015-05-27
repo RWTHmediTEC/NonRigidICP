@@ -25,33 +25,6 @@ function [transformed_mesh, weights, accumulated_transformations] = nonRigidICP(
 %    Additional optional arguments can be passed in the form of pairs with
 %    the following meanings:
 %
-%       'initial_transformation'   - 3-by-4 transformation matrix that
-%                                    roughly aligns the two meshes (the
-%                                    template vertices are transformed).
-%                                    Not needed, if the two input meshes
-%                                    are already roughly aligned. Defaults
-%                                    to the matrix [eye(3), [0; 0; 0]].
-%
-%       'epsilon'                  - Convergence parameter. Has to be
-%                                    positive and defaults to a value of
-%                                    0.0002.
-%
-%       'max_dist'                 - Maximum vertex-to-surface-distance for
-%                                    a nearest neighbor search to classify
-%                                    a point as an inlier. Has to be
-%                                    positive and defaults to a value of 20
-%                                    units.
-%
-%       'max_normal_diff'          - Maximum normal difference in degrees
-%                                    between vertex and surface to classify
-%                                    a point as an inlier. Has to be
-%                                    positive and defaults to a value of 22
-%                                    degrees.
-%
-%       'max_iter'                 - Maximal number of iterations per alpha
-%                                    step. Has to be positive and defaults
-%                                    to a value of 100 units.
-%
 %       'alpha'                    - Array of stiffness parameters.
 %                                    Defaults to an exponentially
 %                                    descending curve (see the internal
@@ -59,6 +32,40 @@ function [transformed_mesh, weights, accumulated_transformations] = nonRigidICP(
 %                                    The values are highly application
 %                                    specific and may range from intervals
 %                                    like [1; 1e8] to [1e-5; 100].
+%
+%       'callback'                 - Function handle to callback function.
+%                                    This function is called after each
+%                                    iteration and the following parameters
+%                                    are passed: deformed template mesh,
+%                                    current iteration, current alpha
+%                                    value.
+%
+%       'epsilon'                  - Convergence parameter. Has to be
+%                                    positive and defaults to a value of
+%                                    0.0002.
+%
+%       'initial_transformation'   - 3-by-4 transformation matrix that
+%                                    roughly aligns the two meshes (the
+%                                    template vertices are transformed).
+%                                    Not needed, if the two input meshes
+%                                    are already roughly aligned. Defaults
+%                                    to the matrix [eye(3), [0; 0; 0]].
+%
+%       'max_dist'                 - Maximum vertex-to-surface-distance for
+%                                    a nearest neighbor search to classify
+%                                    a point as an inlier. Has to be
+%                                    positive and defaults to a value of 20
+%                                    units.
+%
+%       'max_iter'                 - Maximal number of iterations per alpha
+%                                    step. Has to be positive and defaults
+%                                    to a value of 100 units.
+%
+%       'max_normal_diff'          - Maximum normal difference in degrees
+%                                    between vertex and surface to classify
+%                                    a point as an inlier. Has to be
+%                                    positive and defaults to a value of 22
+%                                    degrees.
 %
 %       'verbosity'                - Denotes the amount of informational
 %                                    text put out by this function. The
@@ -103,19 +110,20 @@ function [transformed_mesh, weights, accumulated_transformations] = nonRigidICP(
 
 % Copyright 2014, 2015 Chair of Medical Engineering, RWTH Aachen University
 % Written by Erik Noorman and Christoph Hänisch (haenisch@hia.rwth-aachen.de)
-% Version 1.2
-% Last changed on 2015-05-19.
+% Version 1.3
+% Last changed on 2015-05-26.
 % License: Modified BSD License (BSD license with non-military-use clause)
 
     %% Parse the input parameters
     parser = inputParser;
-    addParameter(parser, 'initial_transformation', [eye(3), [0;0;0]], @(x)validateattributes(x,{'numeric'},{'size',[3,4]}));
-    addParameter(parser, 'epsilon', 0.0002, @(x)validateattributes(x,{'numeric'},{'>',0},'nonRigidICP'));
-    addParameter(parser, 'max_dist', 20, @(x)validateattributes(x,{'numeric'},{'>',0},'nonRigidICP'));
-    addParameter(parser, 'max_normal_diff', 22, @(x)validateattributes(x,{'numeric'},{'>',0},'nonRigidICP'));
-    addParameter(parser, 'max_iter', 100, @(x)validateattributes(x,{'numeric'},{'>',0},'nonRigidICP'));
-    addParameter(parser, 'alpha', getAlpha(), @(x)validateattributes(x,{'numeric'},{'>',0},'nonRigidICP'));
-    addParameter(parser, 'verbosity', 1, @(x)validateattributes(x,{'numeric'},{'>=',0},'nonRigidICP'));
+    addParameter(parser, 'alpha', getAlpha(), @(x) validateattributes(x,{'numeric'},{'>',0},'nonRigidICP'));
+    addParameter(parser, 'callback', [], @(x) isempty(x) || isa(x, 'function_handle'));
+    addParameter(parser, 'epsilon', 0.0002, @(x) validateattributes(x,{'numeric'},{'>',0},'nonRigidICP'));
+    addParameter(parser, 'initial_transformation', [eye(3), [0;0;0]], @(x) validateattributes(x,{'numeric'},{'size',[3,4]}));
+    addParameter(parser, 'max_dist', 20, @(x) validateattributes(x,{'numeric'},{'>',0},'nonRigidICP'));
+    addParameter(parser, 'max_iter', 100, @(x) validateattributes(x,{'numeric'},{'>',0},'nonRigidICP'));
+    addParameter(parser, 'max_normal_diff', 22, @(x) validateattributes(x,{'numeric'},{'>',0},'nonRigidICP'));
+    addParameter(parser, 'verbosity', 1, @(x) validateattributes(x,{'numeric'},{'>=',0},'nonRigidICP'));
     parse(parser, varargin{:});
 
     %% Load exteral functions
@@ -126,12 +134,13 @@ function [transformed_mesh, weights, accumulated_transformations] = nonRigidICP(
     %% Initialise variables
     n = size(template_mesh.vertices, 1); % # template vertices
 
-    initial_transformation = parser.Results.initial_transformation;
-    epsilon = parser.Results.epsilon;
-    max_dist = parser.Results.max_dist; % distance in mm
-    max_normal_diff = parser.Results.max_normal_diff; % angle in degrees
-    max_iter = parser.Results.max_iter; % maximal # iteration for fixed stiffness
     alpha = parser.Results.alpha; % Stiffness parameter list
+    callback = parser.Results.callback;
+    epsilon = parser.Results.epsilon;
+    initial_transformation = parser.Results.initial_transformation;
+    max_dist = parser.Results.max_dist; % distance in mm
+    max_iter = parser.Results.max_iter; % maximal # iteration for fixed stiffness
+    max_normal_diff = parser.Results.max_normal_diff; % angle in degrees
     verbosity_level = parser.Results.verbosity;
 
 
@@ -258,11 +267,16 @@ function [transformed_mesh, weights, accumulated_transformations] = nonRigidICP(
             % Compute new do-while condition
             normXdiff = norm(full(X_old-X))/n;
 
-            %% TESTING: uncomment the following line for ploting the current meshes
-            %myPlot(template_mesh.vertices, template_mesh.faces, target_mesh.vertices, target_mesh.faces, 0.5, 1.0); pause();
-
             if verbosity_level > 0
                 fprintf('%d:\t%.0f\t%.4f\t%d\t%.1f\n', iter, a, normXdiff, sum(weights), toc(t1)); % print iter # and time
+            end
+            
+            % Invoke callback function
+
+            if ~isempty(callback)
+                transformed_mesh.vertices = template_mesh.vertices;
+                transformed_mesh.faces = template_mesh.faces;
+                callback(transformed_mesh, iter, a);
             end
 
             % do-while condition still holds?
