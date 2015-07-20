@@ -87,7 +87,7 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
 %
 %       'transformed_mesh'             - aligned template mesh
 %
-%       'weights'                      - template vertex weights of the
+%       'inliers'                      - template vertex weights of the
 %                                        last iteration. A value of zero
 %                                        denotes an outlier, a value of one
 %                                        denotes an inlier.
