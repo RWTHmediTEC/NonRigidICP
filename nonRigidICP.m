@@ -1,4 +1,4 @@
-function [transformed_mesh, weights, accumulated_transformations] = nonRigidICP(template_mesh, target_mesh, varargin)
+function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(template_mesh, target_mesh, varargin)
 
 % NONRIGIDICP   Non-rigid alignment of two meshes (e.g. from STL files)
 %
@@ -118,8 +118,8 @@ function [transformed_mesh, weights, accumulated_transformations] = nonRigidICP(
 
 % Copyright 2014, 2015 Chair of Medical Engineering, RWTH Aachen University
 % Written by Erik Noorman and Christoph Hänisch (haenisch@hia.rwth-aachen.de)
-% Version 1.4
-% Last changed on 2015-07-14.
+% Version 1.4.1
+% Last changed on 2015-07-20.
 % License: Modified BSD License (BSD license with non-military-use clause)
 
     %% Parse the input parameters
