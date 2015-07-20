@@ -1,0 +1,8 @@
+As you can see from the reconstruction results the average morphing
+error is fairly small. The greatest surface distance errors only
+appear in the border areas of the unconnected patches (the STL demo
+data was converted from IGES to STL where holes were introduced at
+the patch boundaries). Due to the regularization the resulting
+surface is smooth. Thus, in the border areas (where no ground truth
+is available) the surface distance error should be in the same order
+of magnitude as the remaining data.
