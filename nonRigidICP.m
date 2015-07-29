@@ -85,17 +85,17 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
 %
 %    Outputs:
 %
-%       'transformed_mesh'             - aligned template mesh
+%       'transformed_mesh'             - Aligned template mesh.
 %
-%       'inliers'                      - template vertex weights of the
-%                                        last iteration. A value of zero
-%                                        denotes an outlier, a value of one
-%                                        denotes an inlier.
+%       'inliers'                      - Template vertex mask of the last
+%                                        iteration. A value of zero denotes
+%                                        an outlier, a value of one denotes
+%                                        an inlier.
 %
-%       'accumulated_transformations'  - transformation which transforms
-%                                        the original template_mesh such
-%                                        that it is aligned with the
-%                                        target_mesh
+%       'accumulated_transformations'  - Transformations which transform
+%                                        the vertices of the original
+%                                        template_mesh such that it is
+%                                        aligned with the target_mesh.
 %
 %
 %    Example:
@@ -118,8 +118,8 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
 
 % Copyright 2014, 2015 Chair of Medical Engineering, RWTH Aachen University
 % Written by Erik Noorman and Christoph Hänisch (haenisch@hia.rwth-aachen.de)
-% Version 1.4.1
-% Last changed on 2015-07-20.
+% Version 1.4.2
+% Last changed on 2015-07-29.
 % License: Modified BSD License (BSD license with non-military-use clause)
 
     %% Parse the input parameters

@@ -49,7 +49,7 @@ function nonRigidICPDemo()
     % alpha = [1e9 1e7 1e5 1000 100 10 1]';
     alpha = 1e8 * exp(-(0:21)');
 
-    [reconstruction, weights] = nonRigidICP(template_mesh, target_mesh, 'alpha', alpha);
+    [reconstruction, inliers] = nonRigidICP(template_mesh, target_mesh, 'alpha', alpha);
 
     % Shift the reconstruction in such a manner that it is aligned with the
     % original target data set.
