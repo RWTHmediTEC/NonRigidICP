@@ -67,6 +67,17 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
 %                                    positive and defaults to a value of 22
 %                                    degrees.
 %
+%       'opposite_face_normals'    - Affects how deviations between face
+%                                    normals are handled. If set to 'treat
+%                                    as equal' face normals and their
+%                                    opposite vectors are treated as the
+%                                    same vectors. This comes in handy if
+%                                    the surface orientation of one of the
+%                                    shapes is mirrored. The default value
+%                                    is 'distinguish' where opposite
+%                                    vectors are treated as distinct
+%                                    vectors.
+%
 %       'verbosity'                - Denotes the amount of informational
 %                                    text put out by this function. The
 %                                    higher the value the more information
@@ -135,7 +146,7 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
 
 % Copyright 2014, 2015 Chair of Medical Engineering, RWTH Aachen University
 % Written by Erik Noorman and Christoph Hänisch (haenisch@hia.rwth-aachen.de)
-% Version 1.4.3
+% Version 1.5
 % Last changed on 2015-08-05.
 % License: Modified BSD License (BSD license with non-military-use clause)
 
@@ -148,6 +159,7 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
     addParameter(parser, 'max_dist', 20, @(x) validateattributes(x,{'numeric'},{'>',0},'nonRigidICP'));
     addParameter(parser, 'max_iter', 100, @(x) validateattributes(x,{'numeric'},{'>',0},'nonRigidICP'));
     addParameter(parser, 'max_normal_diff', 22, @(x) validateattributes(x,{'numeric'},{'>',0},'nonRigidICP'));
+    addParameter(parser, 'opposite_face_normals', 'distinguish', @(x) any(validatestring(x, {'distinguish', 'treat as equal'})));
     addParameter(parser, 'weights', [], @(x)  validateattributes(x,{'numeric'},{'size',[NaN,1]}));
     addParameter(parser, 'verbosity', 1, @(x) validateattributes(x,{'numeric'},{'>=',0},'nonRigidICP'));
     parse(parser, varargin{:});
@@ -169,6 +181,13 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
     max_normal_diff = parser.Results.max_normal_diff; % angle in degrees
     verbosity_level = parser.Results.verbosity;
     weights = parser.Results.weights;
+    
+    switch parser.Results.opposite_face_normals
+        case 'distinguish'
+            treat_opposite_normal_vectors_as_equal = false;
+        case 'treat as equal'
+            treat_opposite_normal_vectors_as_equal = true;
+    end
     
     if isempty(weights)
         weights = ones(n,1);
@@ -231,7 +250,8 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
             [U, inliers, ~] = closestPointsOnSurface(...
                 template_mesh, target_mesh, ...
                 v2f_target, kd_tree_target, ...
-                max_dist, max_normal_diff);
+                max_dist, max_normal_diff, ...
+                treat_opposite_normal_vectors_as_equal);
 
             %% Build Error Matrix and find solution X = A/B and transform model
             % Construct sparse matrices: M, G, W, D, A, B
@@ -336,7 +356,7 @@ function alpha = getAlpha()
 end
 
 
-function [closest_points, inliers, distances] = closestPointsOnSurface(source_mesh, target_mesh, v2f_target, kd_tree_target, max_dist, max_normal_diff)
+function [closest_points, inliers, distances] = closestPointsOnSurface(source_mesh, target_mesh, v2f_target, kd_tree_target, max_dist, max_normal_diff, treat_opposite_normal_vectors_as_equal)
     % This function finds for every vertex in the source mesh the closest
     % point on the surface of target mesh and sets the values of the
     % inliers vector to 'false' if one of the following condition holds:
@@ -349,8 +369,12 @@ function [closest_points, inliers, distances] = closestPointsOnSurface(source_me
     closest_points = target_mesh.vertices(closest_points_idx, :);
 
     % Set weights to 'false' if point normal differences are too high
-    normal_diff = acos(dot(source_mesh.vertex_normals, target_mesh.vertex_normals(closest_points_idx,:), 2)) / pi * 180; % in degrees
-    inliers = normal_diff < max_normal_diff;
+    normal_diff = acos(dot(source_mesh.vertex_normals, target_mesh.vertex_normals(closest_points_idx,:), 2)) / pi * 180; % in degrees and inside [0; 180]
+    if treat_opposite_normal_vectors_as_equal
+        inliers = normal_diff < max_normal_diff | abs(normal_diff-180) < max_normal_diff;
+    else
+        inliers = normal_diff < max_normal_diff;
+    end
 
     % For each vertex in the source mesh find the closest surface point (on
     % those triangles that touch the closest vertex of the target mesh) 
