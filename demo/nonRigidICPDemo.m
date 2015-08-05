@@ -12,14 +12,14 @@ function nonRigidICPDemo()
 
     templateFilename = 'template.stl';
     [template_mesh.vertices, template_mesh.faces] = READ_stl(templateFilename);
-    [template_mesh.vertices, template_mesh.faces] = patchslim(template_mesh.vertices, template_mesh.faces);
+    template_mesh = removeDuplicatedVertices(template_mesh);
 
 
     %% Load Target
 
     targetFilename = 'target.stl';
     [target_mesh.vertices, target_mesh.faces] = READ_stl(targetFilename);
-    [target_mesh.vertices, target_mesh.faces] = patchslim(target_mesh.vertices, target_mesh.faces);
+    target_mesh = removeDuplicatedVertices(target_mesh);
 
 
     %% Roughly align template and target (if not already done)

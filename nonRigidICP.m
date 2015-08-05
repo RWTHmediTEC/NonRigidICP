@@ -104,22 +104,39 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
 %       [template.vertices, template.faces] = READ_stl('template.stl');
 %       [target.vertices, target.faces] = READ_stl('target.stl');
 %
-%       % Remove the duplicates (mandatory).
-%       [template.vertices, template.faces] = ...
-%           patchslim(template.vertices, template.faces);
-%       [target.vertices, target.faces] =  ...
-%           patchslim(target.vertices, target.faces);
+%       % Remove duplicated vertices (mandatory).
+%       template = removeDuplicatedVertices(template);
+%       target = removeDuplicatedVertices(target);
 %
 %       % Perform the fitting.
 %       transformed_target = nonRigidICP(template, target);
 %
 %
-%    See also patchslim (located on Matlab File Exchange)
+%    Troubleshooting:
+%
+%    If you get an error message like 'Warning: Rank deficient, rank = ...'
+%    possible sources of error might be:
+%
+%       - Non-overlapping shapes. You should either register the shapes or
+%         provide an initial transformation. For similar shapes, it might
+%         suffice to shift their centers of mass to the origin:
+%         center_of_mass = mean(shape.vertices);
+%         shape.vertices = bsxfun(@minus, shape.vertices, center_of_mass);
+%
+%       - The distances between the surfaces are too high. Change the
+%         parameter 'max_dist' accordingly.
+%
+%       - The deviation between the orientation of the surface normals is
+%         too high. Change the parameter 'max_normal_diff' accordingly.
+%         Alternatively, it might be necessary to invert the orientation of
+%         the faces of one of the shapes.
+%
+%    See also removeDuplicatedVertices (located in the demo folder)
 
 % Copyright 2014, 2015 Chair of Medical Engineering, RWTH Aachen University
 % Written by Erik Noorman and Christoph Hänisch (haenisch@hia.rwth-aachen.de)
-% Version 1.4.2
-% Last changed on 2015-07-29.
+% Version 1.4.3
+% Last changed on 2015-08-05.
 % License: Modified BSD License (BSD license with non-military-use clause)
 
     %% Parse the input parameters
@@ -147,7 +164,7 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
     callback = parser.Results.callback;
     epsilon = parser.Results.epsilon;
     initial_transformation = parser.Results.initial_transformation;
-    max_dist = parser.Results.max_dist; % distance in mm
+    max_dist = parser.Results.max_dist; % distance in units (e.g. mm)
     max_iter = parser.Results.max_iter; % maximal # iteration for fixed stiffness
     max_normal_diff = parser.Results.max_normal_diff; % angle in degrees
     verbosity_level = parser.Results.verbosity;
@@ -172,9 +189,6 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
     end
     X = repmat(initial_transformation', n, 1);
     accumulated_transformations = X;
-
-    %% TESTING: meshes are roughly aligned? (uncomment following line for testing)
-    %myPlot(template_mesh.vertices, template_mesh.faces, target_mesh.vertices, target_mesh.faces, 0.5, 1.0); pause();
 
     % Create structures for efficient point2planeDist calculation
     kd_tree_target = KDTreeSearcher(target_mesh.vertices, 'distance', 'euclidean'); % vertex distance KD-Tree
@@ -206,9 +220,6 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
             break;
         end
 
-        %% TESTING: uncomment following line for ploting the current meshes
-        %myPlot(template_mesh.vertices, template_mesh.faces, target_mesh.vertices, target_mesh.faces, 0.5, 1.0); pause();
-
         % do while |X^(i) - X^(i-1)| < epsilon
         for iter = 1:max_iter
             t1 = tic;
@@ -231,7 +242,6 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
 
             vWeight = weights.*inliers.*computeVertexWeight(template_mesh, v2f_template);
             W = sparse(1:n, 1:n, vWeight); % [n x n]
-            %W = sparse(1:n, 1:n, w); % [n x n]
 
             % From the vertices (x_i, y_i, z_i) create the matrix
             %
