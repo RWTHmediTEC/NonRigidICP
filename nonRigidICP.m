@@ -35,10 +35,14 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
 %
 %       'callback'                 - Function handle to callback function.
 %                                    This function is called after each
-%                                    iteration and the following parameters
-%                                    are passed: deformed template mesh,
-%                                    current iteration, current alpha
-%                                    value.
+%                                    iteration. Only one parameter is
+%                                    passed being a struct with the
+%                                    following field names: alpha,
+%                                    computation_time, gradual_change,
+%                                    inner_iteration, iteration,
+%                                    number_of_inliers,
+%                                    overall_computation_time,
+%                                    transformed_mesh.
 %
 %       'epsilon'                  - Convergence parameter. Has to be
 %                                    positive and defaults to a value of
@@ -146,8 +150,8 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
 
 % Copyright 2014, 2015 Chair of Medical Engineering, RWTH Aachen University
 % Written by Erik Noorman and Christoph Hänisch (haenisch@hia.rwth-aachen.de)
-% Version 1.5
-% Last changed on 2015-08-05.
+% Version 1.6
+% Last changed on 2015-08-06.
 % License: Modified BSD License (BSD license with non-military-use clause)
 
     %% Parse the input parameters
@@ -179,6 +183,8 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
     max_dist = parser.Results.max_dist; % distance in units (e.g. mm)
     max_iter = parser.Results.max_iter; % maximal # iteration for fixed stiffness
     max_normal_diff = parser.Results.max_normal_diff; % angle in degrees
+    number_of_iterations = 0; % overall number of iterations
+    overall_computation_time = 0;
     verbosity_level = parser.Results.verbosity;
     weights = parser.Results.weights;
     
@@ -228,7 +234,7 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
 
     %% Loop over stiffness alpha^i element {a^1,...,a^k}, a^i > a^(i+1)
     if verbosity_level > 0
-        fprintf('\niter\talpha\tdiff\tinlier\ttime\n');
+        fprintf('\niter  i   alpha       diff     inlier   time   time\n');
     end
 
     stop_the_outermost_loop = false; % used to stop the outer loop if there is virtually no morphing in any of the computing steps
@@ -241,7 +247,9 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
 
         % do while |X^(i) - X^(i-1)| < epsilon
         for iter = 1:max_iter
-            t1 = tic;
+            timer_value = tic;
+
+            number_of_iterations = number_of_iterations + 1;
 
             X_old = X;
             % Find preliminary correspondences
@@ -310,16 +318,31 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
             % Compute new do-while condition
             normXdiff = norm(full(X_old-X))/n;
 
+            % Gather some data and statistics
+
+            computation_time = toc(timer_value);
+            overall_computation_time = overall_computation_time + computation_time;
+            number_of_inliers = sum(inliers);
+
             if verbosity_level > 0
-                fprintf('%d:\t%.0f\t%.4f\t%d\t%.1f\n', iter, a, normXdiff, sum(inliers), toc(t1)); % print iter # and time
+                fprintf('%-6d%-4d%-12.0f%-9.4f%-9d%-7.1f%.1f\n', ...
+                        number_of_iterations, iter, a, normXdiff, ...
+                        number_of_inliers, computation_time, overall_computation_time);
             end
             
             % Invoke callback function
 
             if ~isempty(callback)
-                transformed_mesh.vertices = template_mesh.vertices;
-                transformed_mesh.faces = template_mesh.faces;
-                callback(transformed_mesh, iter, a);
+                data.alpha = a;
+                data.computation_time = computation_time;
+                data.gradual_change = normXdiff;
+                data.inner_iteration = iter;
+                data.iteration = number_of_iterations;
+                data.number_of_inliers = number_of_inliers;
+                data.overall_computation_time = overall_computation_time;
+                data.transformed_mesh.vertices = template_mesh.vertices;
+                data.transformed_mesh.faces = template_mesh.faces;
+                callback(data);
             end
 
             % do-while condition still holds?
