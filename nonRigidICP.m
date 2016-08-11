@@ -48,6 +48,12 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
 %                                    positive and defaults to a value of
 %                                    0.0002.
 %
+%       'fast_computation'         - If set to true, point correspondences
+%                                    are established by a simple nearest
+%                                    neighbor search (i.e. point-to-point
+%                                    instead of point-to-face). Defaults to
+%                                    false.
+%
 %       'initial_transformation'   - 3-by-4 transformation matrix that
 %                                    roughly aligns the two meshes (the
 %                                    template vertices are transformed).
@@ -142,16 +148,17 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
 %         parameter 'max_dist' accordingly.
 %
 %       - The deviation between the orientation of the surface normals is
-%         too high. Change the parameter 'max_normal_diff' accordingly.
-%         Alternatively, it might be necessary to invert the orientation of
-%         the faces of one of the shapes.
+%         too high. Change the parameter 'max_normal_diff' accordingly
+%         and/or set the 'opposite_face_normals' option to true.
+%         Alternatively, the orientation of the faces of one of the shapes
+%         might be inverted.
 %
 %    See also removeDuplicatedVertices (located in the demo folder)
 
-% Copyright 2014, 2015 Chair of Medical Engineering, RWTH Aachen University
+% Copyright 2014, 2015,2016 Chair of Medical Engineering, RWTH Aachen University
 % Written by Erik Noorman and Christoph Hänisch (haenisch@hia.rwth-aachen.de)
-% Version 1.6
-% Last changed on 2015-08-06.
+% Version 1.7
+% Last changed on 2016-08-11.
 % License: Modified BSD License (BSD license with non-military-use clause)
 
     %% Parse the input parameters
@@ -159,6 +166,7 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
     addParameter(parser, 'alpha', getAlpha(), @(x) validateattributes(x,{'numeric'},{'>',0},'nonRigidICP'));
     addParameter(parser, 'callback', [], @(x) isempty(x) || isa(x, 'function_handle'));
     addParameter(parser, 'epsilon', 0.0002, @(x) validateattributes(x,{'numeric'},{'>',0},'nonRigidICP'));
+    addParameter(parser, 'fast_computation', false, @islogical);
     addParameter(parser, 'initial_transformation', [eye(3), [0;0;0]], @(x) validateattributes(x,{'numeric'},{'size',[3,4]}));
     addParameter(parser, 'max_dist', 20, @(x) validateattributes(x,{'numeric'},{'>',0},'nonRigidICP'));
     addParameter(parser, 'max_iter', 100, @(x) validateattributes(x,{'numeric'},{'>',0},'nonRigidICP'));
@@ -179,6 +187,7 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
     alpha = parser.Results.alpha; % Stiffness parameter list
     callback = parser.Results.callback;
     epsilon = parser.Results.epsilon;
+    fast_computation = parser.Results.fast_computation;
     initial_transformation = parser.Results.initial_transformation;
     max_dist = parser.Results.max_dist; % distance in units (e.g. mm)
     max_iter = parser.Results.max_iter; % maximal # iteration for fixed stiffness
@@ -255,11 +264,17 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
             % Find preliminary correspondences
             template_mesh.vertex_normals = STLVertexNormals(template_mesh.faces, template_mesh.vertices); % compute vertex normals (face area weighted)
 
-            [U, inliers, ~] = closestPointsOnSurface(...
-                template_mesh, target_mesh, ...
-                v2f_target, kd_tree_target, ...
-                max_dist, max_normal_diff, ...
-                treat_opposite_normal_vectors_as_equal);
+            if fast_computation
+                [U, inliers, ~] = closestPointsOnSurfaceFastComputation(...
+                    template_mesh, target_mesh, kd_tree_target, ...
+                    max_dist, max_normal_diff, treat_opposite_normal_vectors_as_equal);
+            else
+                [U, inliers, ~] = closestPointsOnSurface(...
+                    template_mesh, target_mesh, ...
+                    v2f_target, kd_tree_target, ...
+                    max_dist, max_normal_diff, ...
+                    treat_opposite_normal_vectors_as_equal);
+            end
 
             %% Build Error Matrix and find solution X = A/B and transform model
             % Construct sparse matrices: M, G, W, D, A, B
@@ -380,10 +395,10 @@ end
 
 
 function [closest_points, inliers, distances] = closestPointsOnSurface(source_mesh, target_mesh, v2f_target, kd_tree_target, max_dist, max_normal_diff, treat_opposite_normal_vectors_as_equal)
-    % This function finds for every vertex in the source mesh the closest
+    % This function finds for every vertex of the source mesh the closest
     % point on the surface of target mesh and sets the values of the
-    % inliers vector to 'false' if one of the following condition holds:
-    % 1. The normal differenz is higher than the value 'max_normal_diff'
+    % 'inliers' vector to 'false' if one of the following condition holds:
+    % 1. The normal difference is higher than the value 'max_normal_diff'
     % 2. The point-to-plane distance is higher than 'max_dist'
     % 3. The closest target vertex is a border vertex
 
@@ -427,6 +442,29 @@ function [closest_points, inliers, distances] = closestPointsOnSurface(source_me
                 end
             end
         end
+    end
+
+    inliers = inliers & distances < max_dist; % check if closest points are not to far away
+end
+
+
+function [closest_points, inliers, distances] = closestPointsOnSurfaceFastComputation(source_mesh, target_mesh, kd_tree_target, max_dist, max_normal_diff, treat_opposite_normal_vectors_as_equal)
+    % This function finds for every vertex of the source mesh the closest vertex of the target mesh
+    % and sets the values of the 'inliers' vector to 'false' if one of the following condition holds:
+    % 1. The normal difference is higher than the value 'max_normal_diff'
+    % 2. The point-to-plane distance is higher than 'max_dist'
+    % 3. The closest target vertex is a border vertex
+
+    % Initialize closest_points with closest vertices
+    [closest_points_idx, distances] = knnsearch(kd_tree_target, source_mesh.vertices); % nearest neighbor search
+    closest_points = target_mesh.vertices(closest_points_idx, :);
+
+    % Set weights to 'false' if point normal differences are too high
+    normal_diff = acos(dot(source_mesh.vertex_normals, target_mesh.vertex_normals(closest_points_idx,:), 2)) / pi * 180; % in degrees and inside [0; 180]
+    if treat_opposite_normal_vectors_as_equal
+        inliers = normal_diff < max_normal_diff | abs(normal_diff-180) < max_normal_diff;
+    else
+        inliers = normal_diff < max_normal_diff;
     end
 
     inliers = inliers & distances < max_dist; % check if closest points are not to far away
