@@ -88,6 +88,13 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
 %                                    vectors are treated as distinct
 %                                    vectors.
 %
+%       'reject_border_vertices'  -  If set to true, point correspondences
+%                                    are rejected if they lie on a face
+%                                    which is part of the mesh's border.
+%                                    This option is only recognized if the
+%                                    'fast_computation' option is set to
+%                                    true. The default value is true.
+%
 %       'verbosity'                - Denotes the amount of informational
 %                                    text put out by this function. The
 %                                    higher the value the more information
@@ -155,10 +162,10 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
 %
 %    See also removeDuplicatedVertices (located in the demo folder)
 
-% Copyright 2014, 2015,2016 Chair of Medical Engineering, RWTH Aachen University
+% Copyright 2014, 2015, 2016 Chair of Medical Engineering, RWTH Aachen University
 % Written by Erik Noorman and Christoph Hänisch (haenisch@hia.rwth-aachen.de)
-% Version 1.7
-% Last changed on 2016-08-11.
+% Version 1.8
+% Last changed on 2016-08-12.
 % License: Modified BSD License (BSD license with non-military-use clause)
 
     %% Parse the input parameters
@@ -172,6 +179,7 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
     addParameter(parser, 'max_iter', 100, @(x) validateattributes(x,{'numeric'},{'>',0},'nonRigidICP'));
     addParameter(parser, 'max_normal_diff', 22, @(x) validateattributes(x,{'numeric'},{'>',0},'nonRigidICP'));
     addParameter(parser, 'opposite_face_normals', 'distinguish', @(x) any(validatestring(x, {'distinguish', 'treat as equal'})));
+    addParameter(parser, 'reject_border_vertices', true, @islogical);
     addParameter(parser, 'weights', [], @(x)  validateattributes(x,{'numeric'},{'size',[NaN,1]}));
     addParameter(parser, 'verbosity', 1, @(x) validateattributes(x,{'numeric'},{'>=',0},'nonRigidICP'));
     parse(parser, varargin{:});
@@ -194,6 +202,7 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
     max_normal_diff = parser.Results.max_normal_diff; % angle in degrees
     number_of_iterations = 0; % overall number of iterations
     overall_computation_time = 0;
+    reject_border_vertices = parser.Results.reject_border_vertices;
     verbosity_level = parser.Results.verbosity;
     weights = parser.Results.weights;
     
@@ -266,8 +275,11 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
 
             if fast_computation
                 [U, inliers, ~] = closestPointsOnSurfaceFastComputation(...
-                    template_mesh, target_mesh, kd_tree_target, ...
-                    max_dist, max_normal_diff, treat_opposite_normal_vectors_as_equal);
+                    template_mesh, target_mesh, ...
+                    v2f_target, kd_tree_target, ...
+                    max_dist, max_normal_diff, ...
+                    treat_opposite_normal_vectors_as_equal, ...
+                    reject_border_vertices);
             else
                 [U, inliers, ~] = closestPointsOnSurface(...
                     template_mesh, target_mesh, ...
@@ -448,7 +460,7 @@ function [closest_points, inliers, distances] = closestPointsOnSurface(source_me
 end
 
 
-function [closest_points, inliers, distances] = closestPointsOnSurfaceFastComputation(source_mesh, target_mesh, kd_tree_target, max_dist, max_normal_diff, treat_opposite_normal_vectors_as_equal)
+function [closest_points, inliers, distances] = closestPointsOnSurfaceFastComputation(source_mesh, target_mesh, v2f_target, kd_tree_target, max_dist, max_normal_diff, treat_opposite_normal_vectors_as_equal, reject_border_vertices)
     % This function finds for every vertex of the source mesh the closest vertex of the target mesh
     % and sets the values of the 'inliers' vector to 'false' if one of the following condition holds:
     % 1. The normal difference is higher than the value 'max_normal_diff'
@@ -465,6 +477,20 @@ function [closest_points, inliers, distances] = closestPointsOnSurfaceFastComput
         inliers = normal_diff < max_normal_diff | abs(normal_diff-180) < max_normal_diff;
     else
         inliers = normal_diff < max_normal_diff;
+    end
+
+    % Test if a vertex lies on the border
+    if reject_border_vertices
+        for i = 1:size(source_mesh.vertices, 1)
+            if inliers(i)
+                closest_faces_idx = v2f_target{closest_points_idx(i)}; % all triangles that include the closest vertex
+                number_faces = size(closest_faces_idx, 2);
+                number_vertices = size(unique(reshape(target_mesh.faces(closest_faces_idx,:), number_faces*3, 1)), 1);
+                if number_faces + 1 ~= number_vertices
+                    inliers(i) = false;
+                end
+            end
+        end
     end
 
     inliers = inliers & distances < max_dist; % check if closest points are not to far away
