@@ -31,7 +31,8 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
 %                                    function getAlpha() for more details).
 %                                    The values are highly application
 %                                    specific and may range from intervals
-%                                    like [1; 1e8] to [1e-5; 100].
+%                                    like [1; 1e8] to [1e-5; 100]. Must be
+%                                    given as a column vector.
 %
 %       'callback'                 - Function handle to callback function.
 %                                    This function is called after each
@@ -164,13 +165,13 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
 
 % Copyright 2014, 2015, 2016 Chair of Medical Engineering, RWTH Aachen University
 % Written by Erik Noorman and Christoph Hänisch (haenisch@hia.rwth-aachen.de)
-% Version 1.8
-% Last changed on 2016-08-12.
+% Version 1.8.1
+% Last changed on 2016-12-06.
 % License: Modified BSD License (BSD license with non-military-use clause)
 
     %% Parse the input parameters
     parser = inputParser;
-    addParameter(parser, 'alpha', getAlpha(), @(x) validateattributes(x,{'numeric'},{'>',0},'nonRigidICP'));
+    addParameter(parser, 'alpha', getAlpha(), @(x) validateattributes(x,{'numeric'},{'column','>',0},'nonRigidICP'));
     addParameter(parser, 'callback', [], @(x) isempty(x) || isa(x, 'function_handle'));
     addParameter(parser, 'epsilon', 0.0002, @(x) validateattributes(x,{'numeric'},{'>',0},'nonRigidICP'));
     addParameter(parser, 'fast_computation', false, @islogical);
