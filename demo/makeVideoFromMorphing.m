@@ -1,8 +1,9 @@
-function makeVideoFromMorphing(output_filename, source_mesh, target_mesh, varargin)
+function varargout = makeVideoFromMorphing(output_filename, source_mesh, target_mesh, varargin)
 
 % MAKEVIDEOFROMMORPHING   Create a video file from a morphing process
 %
-%    MAKEVIDEOFROMMORPHING(output_filename, source_mesh, target_mesh, ...)
+%    makeVideoFromMorphing(output_filename, source_mesh, target_mesh, ...)
+%    frames = makeVideoFromMorphing(__)
 %
 %    This function creates a video file from the process of non-rigidly
 %    aligning two triangulated 3D meshes using the nonRigidICP algorithm.
@@ -23,17 +24,34 @@ function makeVideoFromMorphing(output_filename, source_mesh, target_mesh, vararg
 %       'View'                     - Viewing angles [az, el] for a
 %                                    three-dimensional plot. Defaults to
 %                                    a value of [10 30].
+%
+%    Example
+%
+%       importer = LibraryImporter();
+%       importer.import('MeshProcessing')
+%       importer.import('StatisticalShapeModel')
+%       template = shiftMeshToOrigin(loadSTL('template.stl'));
+%       target = shiftMeshToOrigin(loadSTL('target.stl'));
+%       frames = makeVideoFromMorphing('test.avi', template, target);
+%       figure;
+%       movie(fig, frames, 1, 2)
 
-% Copyright 2015 Chair of Medical Engineering, RWTH Aachen University
+% Copyright 2015, 2017 Chair of Medical Engineering, RWTH Aachen University
 % Written by Christoph Hänisch (haenisch@hia.rwth-aachen.de)
-% Version 1.0
-% Last changed on 2015-08-06.
+% Version 1.1
+% Last changed on 2017-04-26.
 % License: Modified BSD License (BSD license with non-military-use clause)
+
+    %% Import external libraries
+
+    importer = LibraryImporter();
+    importer.addFolder('..');
+    importer.addFolder('../src');
 
     %% Parse the input parameters
 
     if mod(length(varargin), 2)
-        error('Parameter list must have an even legth.')
+        error('Parameter list must have an even length.')
     end
 
     known_keywords = {'SourceMeshOpacity', 'TargetMeshOpacity', 'View'};
@@ -56,39 +74,30 @@ function makeVideoFromMorphing(output_filename, source_mesh, target_mesh, vararg
     addParameter(parser, 'View', [10 30]);
     parse(parser, input_args{:});
 
-
-    %% Load exteral functions
-    path_backup = path();
-    prefix = fileparts(mfilename('fullpath')); % path to current m-file
-    addpath([prefix '/..']);
-    addpath([prefix '/../src']);
-
-
     %% Perform the morphing and save store the obtained geometries
 
     figure
-    patch_handle_target_shape = plotPolygonMesh(target_mesh, 'Lighting', true);
-    patch_handle_target_shape.FaceAlpha = parser.Results.TargetMeshOpacity;
+    hold on
+    patch_handle_target_mesh = plotPolygonMesh(target_mesh, 'Lighting', true, 'ColorScheme', 'Transparent');
+    patch_handle_target_mesh.FaceAlpha = parser.Results.TargetMeshOpacity;
+    patch_handle_source_mesh = plotPolygonMesh(source_mesh, 'Color', 'g', 'ColorScheme', 'Transparent');
+    patch_handle_source_mesh.FaceAlpha = parser.Results.SourceMeshOpacity;
     axis off equal
     view(parser.Results.View)
-    ax = gca;
-    ax.NextPlot = 'replaceChildren';
+    title('Initial situtation')
+    drawnow
+    frames(1) = getframe(gcf);
 
-    frames = [];
-
-    nonRigidICP(source_mesh, target_mesh, unknown_args, 'callback', @callback);
+    nonRigidICP(source_mesh, target_mesh, unknown_args{:}, 'callback', @callback);
     
-    fig = figure;
-    movie(fig, frames, 4)
+    % fig = figure;
+    % movie(fig, frames, 4)
 
-
-    %% Rervert path changes
-    path(path_backup);
+    if nargout == 1
+        varargout{1} = frames;
+    end
 
     return
-
-
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
     %% Helper functions
@@ -104,8 +113,9 @@ function makeVideoFromMorphing(output_filename, source_mesh, target_mesh, vararg
         % - overall_computation_time
         % - transformed_mesh
 
-        patch_handle_source_shape = plotPolygonMesh(target_shape, 'color', 'g');
-        patch_handle_source_shape.FaceAlpha = parser.Results.SourceMeshOpacity;
+        delete(patch_handle_source_mesh)
+        patch_handle_source_mesh = plotPolygonMesh(data.transformed_mesh, 'Color', 'g', 'ColorScheme', 'Transparent');
+        patch_handle_source_mesh.FaceAlpha = parser.Results.SourceMeshOpacity;
         title(sprintf('Iteration %d, inner iteration %d, alpha %f, diff %f, inliers %d', ...
                       data.iteration, ...
                       data.inner_iteration, ...
