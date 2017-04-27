@@ -36,7 +36,7 @@ function varargout = makeVideoFromMorphing(output_filename, source_mesh, target_
 %                                      'alpha', [1e9 1e7 1e5 1e3 100 10 1 0.1 0.01]');
 %       save frames.mat frames
 %       figure;
-%       movie(fig, frames, 1, 2)
+%       movie(frames, 1, 2)
 %       exit
 
 % Copyright 2015, 2017 Chair of Medical Engineering, RWTH Aachen University
