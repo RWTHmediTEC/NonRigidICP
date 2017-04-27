@@ -1,9 +1,9 @@
-function varargout = makeVideoFromMorphing(output_filename, source_mesh, target_mesh, varargin)
+function varargout = makeVideo(output_filename, source_mesh, target_mesh, varargin)
 
-% MAKEVIDEOFROMMORPHING   Create a video file from a morphing process
+% MAKEVIDEO   Create a video file from a morphing process
 %
-%    makeVideoFromMorphing(output_filename, source_mesh, target_mesh, ...)
-%    frames = makeVideoFromMorphing(__)
+%    makeVideo(output_filename, source_mesh, target_mesh, ...)
+%    frames = makeVideo(__)
 %
 %    This function creates a video (file) from the process of non-rigidly
 %    aligning two triangulated 3D meshes using the nonRigidICP algorithm.
@@ -46,14 +46,14 @@ function varargout = makeVideoFromMorphing(output_filename, source_mesh, target_
 %       importer.import('StatisticalShapeModel')
 %       template = shiftMeshToOrigin(loadSTL('template.stl'));
 %       target = shiftMeshToOrigin(loadSTL('target.stl'));
-%       frames = makeVideoFromMorphing('test.avi', template, target, ...
+%       frames = makeVideo('test.avi', template, target, ...
 %                     'alpha', [1e9 1e7 1e5 1e3 100 10 1 0.1 0.01 0.001]');
 %       figure;
 %       movie(frames, 1, 2)
 
 % Copyright 2015, 2017 Chair of Medical Engineering, RWTH Aachen University
 % Written by Christoph Hänisch (haenisch@hia.rwth-aachen.de)
-% Version 1.2
+% Version 1.3
 % Last changed on 2017-04-27.
 % License: Modified BSD License (BSD license with non-military-use clause)
 
@@ -61,8 +61,6 @@ function varargout = makeVideoFromMorphing(output_filename, source_mesh, target_
 
     importer = LibraryImporter();
     importer.import('Tools')
-    importer.addFolder('..');
-    importer.addFolder('../src');
 
     %% Parse the input parameters
     
