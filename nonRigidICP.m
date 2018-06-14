@@ -184,6 +184,26 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
     addParameter(parser, 'weights', [], @(x)  validateattributes(x,{'numeric'},{'size',[NaN,1]}));
     addParameter(parser, 'verbosity', 1, @(x) validateattributes(x,{'numeric'},{'>=',0},'nonRigidICP'));
     parse(parser, varargin{:});
+    
+    %% Assertions and warnings
+    % Assert that the input mesh structs have the correct fields
+    assert(isfield(template_mesh, 'vertices'));
+    assert(isfield(template_mesh, 'faces'));
+    assert(isfield(target_mesh, 'vertices'));
+    assert(isfield(target_mesh, 'faces'));
+    
+    % Check for sizes (to prevent transposed data)
+    assert(size(template_mesh.vertices, 2) == 3);
+    assert(size(template_mesh.faces, 2) == 3);
+    assert(size(target_mesh.vertices, 2) == 3);
+    assert(size(target_mesh.faces, 2) == 3);
+    
+    % Check for normals
+    % While the algorithm can be excecuted without these it is not
+    % recommended
+    if ((~(isfield(template_mesh, 'normals') && isfield(target_mesh, 'normals'))) && (verbosity > 0))
+        warning('No normals detected. This may cause problems.');
+    end
 
     %% Load exteral functions
     path_backup = path();
