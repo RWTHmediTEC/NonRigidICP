@@ -22,6 +22,11 @@ function nonRigidICPDemo()
     targetTriangulation = stlread(targetFilename);
     target_mesh.vertices = targetTriangulation.Points;
     target_mesh.faces = targetTriangulation.ConnectivityList;
+    
+    
+    %% Remove duplicated vertices (mandatory)
+    template_mesh = removeDuplicatedVertices(template_mesh);
+    target_mesh = removeDuplicatedVertices(target_mesh);
 
 
     %% Roughly align template and target (if not already done)

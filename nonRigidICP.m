@@ -129,16 +129,7 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
 %
 %    Example:
 %
-%       % Load in the data.
-%       [template.vertices, template.faces] = READ_stl('template.stl');
-%       [target.vertices, target.faces] = READ_stl('target.stl');
-%
-%       % Remove duplicated vertices (mandatory).
-%       template = removeDuplicatedVertices(template);
-%       target = removeDuplicatedVertices(target);
-%
-%       % Perform the fitting.
-%       transformed_target = nonRigidICP(template, target);
+%       % Run demo/nonRigidICPDemo.m
 %
 %
 %    Troubleshooting:
