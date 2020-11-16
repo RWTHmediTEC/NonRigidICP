@@ -11,15 +11,17 @@ function nonRigidICPDemo()
     %% Load Template
 
     templateFilename = 'template.stl';
-    [template_mesh.vertices, template_mesh.faces] = READ_stl(templateFilename);
-    template_mesh = removeDuplicatedVertices(template_mesh);
+    templateTriangulation = stlread(templateFilename);
+    template_mesh.vertices = templateTriangulation.Points;
+    template_mesh.faces = templateTriangulation.ConnectivityList;
 
 
     %% Load Target
 
     targetFilename = 'target.stl';
-    [target_mesh.vertices, target_mesh.faces] = READ_stl(targetFilename);
-    target_mesh = removeDuplicatedVertices(target_mesh);
+    targetTriangulation = stlread(targetFilename);
+    target_mesh.vertices = targetTriangulation.Points;
+    target_mesh.faces = targetTriangulation.ConnectivityList;
 
 
     %% Roughly align template and target (if not already done)
@@ -57,8 +59,8 @@ function nonRigidICPDemo()
 
 
     %% Write reconstruction to STL-file
-
-    stlwrite('nonRigidICP_Reconstruction.stl', template_mesh.faces, reconstruction.vertices);
+    reconstructionTriangulation = triangulation(template_mesh.faces, reconstruction.vertices);
+    stlwrite(reconstructionTriangulation, 'nonRigidICP_Reconstruction.stl');
 
 
     %% Rervert path changes
