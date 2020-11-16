@@ -1,7 +1,4 @@
-According to MATLAB File Exchange [1] the licenses are as follows:
+According to MATLAB File Exchange the licenses are as follows:
 
-- pointTriangleDistance     BSD License
-- STLVertexNormals          BSD License
-
-
-[1] http://www.mathworks.com/matlabcentral/fileexchange/
+- pointTriangleDistance     BSD License		https://www.mathworks.com/matlabcentral/fileexchange/22857
+- STLVertexNormals          BSD License		https://www.mathworks.com/matlabcentral/fileexchange/33226
