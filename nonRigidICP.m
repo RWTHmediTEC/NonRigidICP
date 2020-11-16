@@ -163,10 +163,10 @@ function [transformed_mesh, inliers, accumulated_transformations] = nonRigidICP(
 %
 %    See also removeDuplicatedVertices (located in the demo folder)
 
-% Copyright 2014, 2015, 2016 Chair of Medical Engineering, RWTH Aachen University
-% Written by Erik Noorman and Christoph Hänisch (haenisch@hia.rwth-aachen.de)
+% Copyright 2014 - 2020 Chair of Medical Engineering, RWTH Aachen University
+% Written by Erik Noorman and Christoph Hänisch
 % Version 1.8.1
-% Last changed on 2016-12-06.
+% Last changed on 2018-08-09.
 % License: Modified BSD License (BSD license with non-military-use clause)
 
     %% Parse the input parameters
